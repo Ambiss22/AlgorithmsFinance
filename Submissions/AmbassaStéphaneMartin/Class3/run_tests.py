@@ -22,6 +22,7 @@ SUITES = (
     ('boundary_reference', 'test_exercise_policy.BoundaryReferenceTests'),
     ('exercise_boundary', 'test_exercise_policy.ExerciseBoundaryTests'),
     ('observed_exercise', 'test_exercise_policy.ObservedExerciseTests'),
+    ('market_experiments', 'test_market_experiments'),
     ('prepared_market', 'test_prepared_market'),
     ('data_preparation', 'test_prepare_data'),
 )

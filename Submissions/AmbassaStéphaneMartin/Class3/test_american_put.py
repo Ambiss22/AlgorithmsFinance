@@ -1,7 +1,7 @@
-"""Test-first scalar PriceAmericanPut contract; standard-library unittest.
+"""Scalar PriceAmericanPut contracts; standard-library unittest.
 
 Expected values are hand-derived rational constants, not a second tree pricer.
-See PRICING_TESTS.txt for the derivations and how to interpret this red stage.
+See PRICING_TESTS.txt for the independent derivations and run instructions.
 """
 from fractions import Fraction
 import math

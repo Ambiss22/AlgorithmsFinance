@@ -38,6 +38,11 @@ def price_american_put(S0: float, K: float, u: float, d: float, R: float, N: int
     exhaustion for enormous N remains a MemoryError/OverflowError, not an
     invalid-input ValueError. No large-market performance guarantee is implied.
     """
+    return _price_tree(S0, K, u, d, R, N, record_boundary=False)[0]
+
+
+def _price_tree(S0, K, u, d, R, N, *, record_boundary):
+    """Shared one-row engine; optionally retain one exercise price per date."""
     S0 = _finite_float(S0, 'S0')
     K = _finite_float(K, 'K')
     u = _finite_float(u, 'u')
@@ -55,9 +60,10 @@ def price_american_put(S0: float, K: float, u: float, d: float, R: float, N: int
     # Validation deliberately precedes both contractual shortcuts.
     immediate = max(K-S0, 0.0)
     if N == 0:
-        return immediate
+        boundary = (S0 if immediate > 0 else None,) if record_boundary else None
+        return immediate, boundary
     if K == 0:
-        return 0.0
+        return 0.0, (None,) * (N+1) if record_boundary else None
 
     spread = u-d
     q = (R-d) / spread
@@ -78,8 +84,27 @@ def price_american_put(S0: float, K: float, u: float, d: float, R: float, N: int
         # expm1 only sees negative arguments; even huge stock nodes need no exp.
         return -K * math.expm1(log_moneyness)
 
+    def stock_at(t, j):
+        if t == 0:
+            return S0
+        # Only exercising nodes reach this function, so the exact stock is <K.
+        log_moneyness = math.fsum((log_moneyness_at_root, (t-j)*log_d, j*log_u))
+        stock = math.exp(math.fsum((math.log(K), log_moneyness)))
+        if stock >= K:
+            # A strictly ITM stock can round onto K; round inside its region.
+            stock = math.nextafter(K, 0.0)
+        if stock <= 0 or not math.isfinite(stock):
+            raise OverflowError('Exercise boundary is outside the positive finite float range.')
+        return stock
+
     values = [intrinsic(N, j) for j in range(N+1)]
+    boundary = [None] * (N+1) if record_boundary else None
+    if boundary is not None:
+        last = next((j for j in range(N, -1, -1) if values[j] > 0), None)
+        if last is not None:
+            boundary[N] = stock_at(N, last)
     for t in range(N-1, -1, -1):
+        last = None
         for j in range(t+1):
             down, up = values[j], values[j+1]
             # Interpolate from the more probable endpoint. Nonnegative finite
@@ -91,5 +116,12 @@ def price_american_put(S0: float, K: float, u: float, d: float, R: float, N: int
             continuation = expected / R
             if not math.isfinite(continuation):
                 raise OverflowError('Discounted option value exceeds the finite float range.')
-            values[j] = max(intrinsic(t, j), continuation)
-    return values[0]
+            exercise = intrinsic(t, j)
+            values[j] = max(exercise, continuation)
+            # At zero/negative interest, waiting weakly dominates exercising a
+            # non-dividend put. This also preserves exact zero-rate value ties.
+            if boundary is not None and R > 1 and exercise > continuation:
+                last = j
+        if boundary is not None and last is not None:
+            boundary[t] = stock_at(t, last)
+    return values[0], tuple(boundary) if boundary is not None else None

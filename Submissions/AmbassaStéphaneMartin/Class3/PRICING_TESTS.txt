@@ -18,7 +18,7 @@ Input contract:
 - Invalid numeric domains and period counts raise ValueError.
 - Apply validation before N=0 and K=0 shortcuts as well.
 - american_put.py implements validated, one-row backward induction.
-  Calibration, boundary output and observed exercise decisions remain pending.
+  Calibration, boundary output and observed exercise decisions are implemented.
 
 FILES
   american_put.py       Production scalar pricing and validation.
@@ -110,12 +110,10 @@ the original suites and six numerical regressions run 33 methods successfully:
 The original tests, assertions, tolerances and expected values are unchanged.
 The four independent values 50/7, 1175/147, 20 and 10/7 are confirmed.
 
-The complete fast suite now has 105 methods: 63 pass, and 42 exercise still-
-unimplemented calibration/boundary/path functions (83 pending case failures).
-Unexpected assertion failures and unittest errors are zero. run_tests.py still
-exits 1 because those later stages remain pending. The status JSON and per-suite
-logs distinguish missing implementation from other failures. No tests are
-skipped or marked with expectedFailure to conceal regressions.
+The complete fast suite now has 127 methods, all passing. run_tests.py exits 0
+with zero pending cases, failures, errors or skips. The reviewed snapshot is
+results/test_summary.json. The older results/scalar_validation.json describes
+the historical scalar-only stage.
 
 EXTENDED TESTS
 See FINANCIAL_CALIBRATION_TESTS.txt for the full-tree reference, financial

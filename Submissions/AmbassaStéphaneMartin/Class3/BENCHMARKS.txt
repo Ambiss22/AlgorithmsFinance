@@ -2,9 +2,8 @@ PRICEAMERICANPUT BENCHMARK PROCEDURE (OPT-IN)
 
 PREREQUISITES
 The production scalar pricer american_put.price_american_put is implemented.
-Synthetic scalar runs are available; boundary runs still require
-exercise_policy.price_american_put_with_boundary. Market runs also require
-market_calibration.calibrate_binomial and its dependencies.
+Boundary pricing and market calibration are implemented. Synthetic and
+one-year market runs are available; full history still needs gap treatment.
 Do not substitute the exponential test-only references for a large-tree pricer.
 
 Neither benchmark_pricing.py nor bitcoin_integration_check.py matches the
@@ -66,3 +65,12 @@ Missing production code produces PENDING_IMPLEMENTATION and saves no metrics.
 Invalid inputs/gap refusal or MemoryError also save no successful measurement.
 A failed run is not a zero-time/zero-memory run. A prior JSON file remains a
 prior run; use distinct --output paths when comparing attempts.
+The separate price_bitcoin.py --run experiment saves one untraced pricing
+pass and whole-process peak memory to results/bitcoin_exercise.json, plus
+the full boundary and observed decision. It does not run the two-pass traced
+allocation benchmark above.
+
+All four required market groups were also measured by market_experiments.py;
+see results/experiments/experiment_summary.csv and MARKET_EXPERIMENTS.txt.
+Its full-history run uses the approved observed-interval approximation. The
+generic benchmark script above keeps the strict hourly gate by default.

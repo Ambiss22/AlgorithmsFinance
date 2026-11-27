@@ -120,7 +120,8 @@ Only an explicit NotImplementedError from a production stub is classified as
 PENDING_IMPLEMENTATION. Import errors, syntax errors, wrong exception types
 and other unexpected exceptions remain errors; wrong results remain failures.
 No expectedFailure decorators or skips hide implementation regressions.
-Exit code 1 is expected while the two exercise-policy functions remain unimplemented.
+Calibration and exercise policy are implemented. The full runner exits 0:
+all 127 methods pass, with zero pending cases, failures, errors or skips.
 The full-tree reference checks and 14 original data-preparation tests should pass.
 Original pricing/data-preparation code, tests, README and manifest are preserved;
 the runner checks their SHA-256 hashes before and after executing the tests.
@@ -135,9 +136,9 @@ Before implementation, python -B -m unittest -v test_market_calibration ran
 21 methods with 50 pending implementation failures (including subtests).
 After implementation, all 54 methods pass with:
   python -B -m unittest -v test_market_calibration test_american_put test_american_put_numerics test_american_put_properties
-The full runner executes 107 methods: 86 pass, while 21 exercise-policy methods
-retain 33 pending cases. Unexpected assertion failures and unittest errors are zero.
-The original calibration and scalar-pricing test files remain unchanged.
+After market-experiment validation the full runner executes 127 methods,
+all passing, with zero pending cases. Unexpected assertion failures and unittest errors are zero.
+The original calibration and scalar-pricing assertions and expected values are unchanged.
 
 NUMERICAL HANDLING
 Adjacent prices use log1p for near-equal levels, direct log ratios when finite,

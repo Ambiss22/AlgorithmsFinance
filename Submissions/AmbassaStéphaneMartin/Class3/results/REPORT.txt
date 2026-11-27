@@ -1,5 +1,9 @@
 PRICEAMERICANPUT LAB - MARKET DATA PREPARATION
 
+Historical data-preparation snapshot. The completed lab results are now in
+experiments/LAB_RESULTS.txt and experiments/experiment_summary.csv. Statements
+below about unimplemented later stages describe this preparation snapshot.
+
 1. Sources and scope
 Course repository: https://github.com/cogeorg/AlgorithmsFinance.git
 Commit: 0325907cb0a6cc3cd1f292fca095b52d9343ac97
@@ -87,7 +91,7 @@ Full-history windows ready for hourly pricing: 0/40.
 Per-asset quality fields and window availability are in the two summary CSVs.
 
 6. S&P 500 is a separate acquisition/calendar problem
-The supplied reference/course_data/fetch_sp500.py requests Yahoo
+The supplied data/fetch_sp500.py requests Yahoo
 Finance ^GSPC with range=730d&interval=1h (roughly TWO years, although
 the course README describes roughly three years). It drops null closes
 and writes hourly/SP500.csv relative to the script. It has not been run.

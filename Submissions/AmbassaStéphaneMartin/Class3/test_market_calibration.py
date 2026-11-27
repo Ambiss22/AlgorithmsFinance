@@ -1,4 +1,4 @@
-"""Deterministic calibration contracts; all production functions remain stubs."""
+"""Deterministic tests for implemented hourly calibration and its input contract."""
 import math
 from numbers import Real
 import unittest

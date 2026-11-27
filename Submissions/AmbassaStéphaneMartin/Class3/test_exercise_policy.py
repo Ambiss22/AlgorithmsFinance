@@ -175,6 +175,48 @@ class ExerciseBoundaryTests(unittest.TestCase):
                 scalar = self.call(american_put.price_american_put, **tree)
                 self.assertTrue(math.isclose(result.price, scalar, rel_tol=REL_TOL, abs_tol=ABS_TOL))
 
+    def test_boundary_uses_scalar_validation_before_shortcuts(self):
+        invalid = ({'S0': 0}, {'K': -1}, {'u': float('inf')},
+                   {'d': 0}, {'R': 1.2}, {'N': True}, {'N': 2.0},
+                   {'N': -1}, {'N': 0, 'u': 0.8}, {'K': 0, 'd': 0})
+        for changes in invalid:
+            with self.subTest(changes=changes):
+                with self.assertRaises(ValueError):
+                    policy.price_american_put_with_boundary(**{**BASE, **changes})
+
+    def test_zero_strike_has_no_exercise_region(self):
+        result = self.priced({**BASE, 'K': 0, 'N': 3})
+        self.assertEqual(result.price, 0)
+        self.assertEqual(result.boundary, (None,) * 4)
+
+    def test_nonpositive_interest_has_no_strict_early_exercise(self):
+        cases = (dict(S0=50, K=100, u=1.125, d=0.875, R=1, N=3),
+                 dict(S0=100, K=110, u=1.1, d=0.85, R=0.98, N=4))
+        for tree in cases:
+            with self.subTest(tree=tree):
+                result = self.priced(tree)
+                self.assertTrue(all(level is None for level in result.boundary[:-1]))
+                self.assert_boundary(result.boundary, exact_full_tree_decisions(**tree).boundary)
+
+    def test_exact_positive_value_tie_at_positive_interest_continues(self):
+        tree = dict(S0=80, K=100, u=1.5, d=0.5, R=1.125, N=1)
+        reference = exact_full_tree_decisions(**tree)
+        self.assertEqual(reference.nodes[0][0].intrinsic, reference.nodes[0][0].continuation)
+        self.assert_boundary(self.priced(tree).boundary, reference.boundary)
+
+    def test_nonreciprocal_factors_can_have_only_early_exercise(self):
+        tree = dict(S0=100, K=120, u=1.25, d=1.125, R=1.1875, N=2)
+        result = self.priced(tree)
+        self.assertEqual(result.price, 20)
+        self.assert_boundary(result.boundary, (100, 112.5, None))
+
+    def test_overflowing_nonexercise_stock_does_not_overflow_boundary(self):
+        tree = dict(S0=1e308, K=1.5e308, u=2, d=0.5, R=1, N=1)
+        result = self.priced(tree)
+        self.assertIsNone(result.boundary[0])
+        self.assertTrue(math.isclose(result.boundary[1], 5e307, rel_tol=REL_TOL))
+        self.assertTrue(math.isclose(result.price, american_put.price_american_put(**tree), rel_tol=REL_TOL))
+
 
 class ObservedExerciseTests(unittest.TestCase):
     @staticmethod
@@ -263,6 +305,49 @@ class ObservedExerciseTests(unittest.TestCase):
             with self.subTest(boundary=invalid):
                 with self.assertRaises(ValueError):
                     self.observed((100, 110), (invalid, None))
+
+    def test_invalid_prices_strikes_and_boundaries_are_rejected(self):
+        for price in (0, -1, float('nan'), float('inf'), True, '90'):
+            with self.subTest(price=price):
+                with self.assertRaises(ValueError):
+                    self.observed((100, price), (None, None))
+        for strike in (-1, float('nan'), float('inf'), True, '100'):
+            with self.subTest(strike=strike):
+                with self.assertRaises(ValueError):
+                    self.observed((100, 90), (None, None), K=strike)
+        for level in (-1, 100, 110, float('inf'), True, '90'):
+            with self.subTest(boundary=level):
+                with self.assertRaises(ValueError):
+                    self.observed((100, 90), (None, level))
+
+    def test_complete_path_is_validated_before_an_early_return(self):
+        dates = self.dates(2)
+        for prices, boundary, timestamps in (
+                ((80, float('nan')), (80, None), dates),
+                ((80, 90), (80, 100), dates),
+                ((80, 90), (80, None), (dates[0], dates[0]))):
+            with self.subTest(prices=prices, boundary=boundary, timestamps=timestamps):
+                with self.assertRaises(ValueError):
+                    self.observed(prices, boundary, timestamps=timestamps)
+
+    def test_dates_must_be_utc_datetimes_and_strictly_increasing(self):
+        dates = self.dates(2)
+        for stamps in ((dates[0], dates[0]), (None, dates[1]),
+                       ('2026-01-01T17:00:00Z', dates[1]),
+                       (dates[0].astimezone(timezone(timedelta(hours=1))), dates[1])):
+            with self.subTest(timestamps=stamps):
+                with self.assertRaises(ValueError):
+                    self.observed((100, 90), (None, 95), timestamps=stamps)
+
+    def test_input_lists_are_preserved_and_hourly_gaps_belong_to_calibration(self):
+        prices, boundary = [110, 90], [None, 95]
+        stamps = list(self.dates(2))
+        stamps[1] += timedelta(hours=2)
+        before = (prices[:], boundary[:], stamps[:])
+        result = self.observed(prices, boundary, timestamps=stamps)
+        self.assertEqual(result.kind, 'maturity_settlement')
+        self.assertEqual(result.timestamp_utc, stamps[1])
+        self.assertEqual((prices, boundary, stamps), before)
 
 
 if __name__ == '__main__':

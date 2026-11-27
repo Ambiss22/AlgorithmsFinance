@@ -3,16 +3,18 @@
 This submission corresponds to **Lab: PriceAmericanPut on market data** in
 `AlgorithmsFinance_Slides3.pdf` (PDF pages 29-32; printed lab slides 29/31-31/31).
 `Submissions/AmbassaStéphaneMartin/Class3/` is the canonical working folder.
-This consolidation uses `Ambiss22:class3-price-american-put-ambassa` at
-`9765746` and retains the useful local reference inspector. The complete course
-checkout keeps shared data and profiling code in the top-level `Class3/` folder.
+The submission branch is `Ambiss22:class3-price-american-put-ambassa` (PR #63).
+The complete course checkout keeps the shared data in its top-level `Class3/`
+folder; this submission contains the student's code, tests and reviewed results.
 
-## Current stage: scalar pricing and market calibration implemented
+## Current stage: all required local market experiments completed
 
 The scalar American put pricer and hourly market calibration are implemented.
-Exercise-boundary construction and observed-exercise decisions remain
-`NotImplementedError` stubs.
-No market-data option value or pricing benchmark has been invented.
+Exercise-boundary construction and observed-path decisions are implemented.
+All four required experiment groups are complete: Bitcoin and all 40 assets,
+each on one year and full history. Results include actual prices, exercise
+decisions, pricing time and whole-process peak memory. Full history uses the
+explicitly approved observed-interval approximation documented below.
 Assignment 1 is unchanged.
 
 | Lab work | Included | Remaining |
@@ -20,13 +22,15 @@ Assignment 1 is unchanged.
 | Acquire/inspect all 40 assets | preparation code, hashes, coverage/quality tables | none for this preparation snapshot |
 | Verify small trees and financial properties | production one-row scalar pricer, exact references, property and numerical tests | complete for scalar stage |
 | Calibrate hourly data | production log returns, hourly sample volatility and binomial factors; existing contracts pass | complete for this stage |
-| Exercise boundary and observed decision | exact node, tie, indexing and path tests | production exercise logic |
-| Bitcoin one-year/full-history and all-asset experiments | actual Bitcoin one-year calibration report; reproducible windows and data-readiness tables | pricing runs, other-asset calibration and an explicit full-history gap decision |
-| Runtime/peak memory | opt-in integration and benchmark procedure | actual measurements after implementation |
+| Exercise boundary and observed decision | shared one-row production engine, exact references, validation and path tests | complete for this stage |
+| Bitcoin one-year/full-history and all-asset experiments | all four groups, including both complete Bitcoin boundaries | complete, with documented full-history approximation |
+| Runtime/peak memory | measured N, asset count, seconds and whole-process peak for all four groups | optional traced-allocation profiling |
 
 ## Reproduce from this repository
 
-Python 3.10+ and its standard library are sufficient. From the repository root:
+Python 3.10+ is required. Reference pricing/calibration APIs use the standard
+library; the market experiment runner and its ten added tests require NumPy
+(`python -m pip install -r requirements.txt`). From the repository root:
 
 ```powershell
 cd "Submissions/AmbassaStéphaneMartin/Class3"
@@ -50,12 +54,13 @@ platforms; the reviewed manifest records the measured Windows snapshot. Course
 data stay unchanged. The course PDF is referenced, not redistributed, and is
 not needed for preparation.
 
-`run_tests.py` currently runs 107 methods: **86 pass**. The remaining 21
-exercise-policy methods have 33 pending cases (16 boundary, 17 observed-decision
-cases); unexpected assertion failures and unittest errors are zero. The runner
-intentionally exits **1** until those functions are implemented. The historical
-105-method pre-calibration snapshot remains in `results/test_summary.json`.
-The existing calibration and scalar-pricing test files are unchanged.
+`run_tests.py` runs **127 methods, all passing**, with zero pending cases,
+failures, errors or skips. It exits **0**. The reviewed snapshot is
+`results/test_summary.json`; regenerated per-suite logs stay under
+`output/pricing_tests/`. Ten exercise-policy regression methods were added.
+Existing test assertions, expected values and numerical tolerances were preserved.
+Ten additional market tests cover vectorized/reference agreement and the
+explicit observed-interval convention; default strict gap rejection is preserved.
 
 Run only the implemented scalar/reference/data checks:
 
@@ -72,8 +77,9 @@ python reference/check_outputs.py
 
 ## Reviewed tables and provenance
 
-`results/bitcoin_calibration.json` is the reproducible report for the implemented
-market-calibration stage. `results/` also contains `asset_summary.csv`, `window_summary.csv`, `gaps.csv`,
+`results/bitcoin_calibration.json` records calibration. The actual one-year
+price/decision and dated boundary are in `results/bitcoin_exercise.json` and
+`results/bitcoin_exercise_boundary.csv`. `results/` also contains `asset_summary.csv`, `window_summary.csv`, `gaps.csv`,
 `exclusions.csv`, `REPORT.txt`, `test_summary.json`, `scalar_validation.json`, `source_manifest.json`, `verification.json` and
 `run_metadata.json`. These are the preparation/test snapshot; fresh results
 are regenerated under `output/`.
@@ -86,8 +92,9 @@ are flagged for explicit treatment before equal-hour calibration. S&P 500 retrie
 is documented separately in the report and has not been run.
 
 The 40 input files are already versioned in the course's `Class3/data/hourly/`.
-Local snapshot copies and generated window rows stay ignored. The snapshot includes no market-data pricing
-table or benchmark measurement; those experiments are deferred.
+Local input snapshots and generated input windows stay ignored. The reviewed
+one-year and full-history results for Bitcoin and the 40-asset batches are
+included under `results/experiments/`.
 
 ## Interfaces, tests and opt-in performance work
 
@@ -96,7 +103,7 @@ table or benchmark measurement; those experiments are deferred.
 - `EXERCISE_TESTS.txt`: boundary/path interfaces, ties, settlement and gap gates.
 - `BENCHMARKS.txt`: explicit elapsed-time/peak-memory protocol and run commands.
 
-After boundary implementation, explicitly run the expensive market check:
+To repeat the optional market correctness/dimensions check:
 
 ```powershell
 python bitcoin_integration_check.py --run
@@ -105,6 +112,71 @@ python bitcoin_integration_check.py --run
 Large-tree runs stay outside the default fast suite. Benchmark output distinguishes
 untraced elapsed time, peak traced Python allocations and whole-process peak
 resident memory. There are no machine-dependent timing pass/fail thresholds.
+
+## Complete market experiments
+
+```powershell
+python -m pip install -r requirements.txt
+python -B market_experiments.py --run --gap-policy observed-intervals
+```
+
+| Group | Assets | N | Pricing seconds | Wall seconds | Process peak MiB |
+|---|---:|---:|---:|---:|---:|
+| bitcoin_one_year | 1 | 8760 | 0.563 | 0.644 | 40.29 |
+| bitcoin_full_history | 1 | 43822 | 7.684 | 8.013 | 63.74 |
+| all_assets_one_year | 40 | 8760 | 15.352 | 17.504 | 47.19 |
+| all_assets_full_history | 40 | 43822 | 370.467 | 379.818 | 78.84 |
+
+The first pricing call includes NumPy's lazy import; wall time also includes
+loading/calibration/output. Each group runs in a fresh process and handles its
+assets sequentially. Peak memory includes that process's imports and data,
+rather than being a pricing-only allocation measurement.
+
+The English synthesis is `results/experiments/LAB_RESULTS.txt`.
+`experiment_summary.csv` contains the four measured runs; `asset_results.csv`
+contains 82 profile rows for 80 distinct asset/window contracts (the two
+Bitcoin-only profiles repeat their batch contracts).
+
+Bitcoin full history starts at S0=K=61560.49 USDT: price 20716.754071254047;
+first observed exercise 2022-06-18 06:00 UTC; gross payoff 42121.23 USDT/BTC.
+The one-year contract has a different issue date and strike.
+
+Full history retains every observed close: N=43822 observed intervals over
+43823 actual hours. The missing 2023-03-24 13:00 UTC hour is represented by a
+mean model period T/N = 1.0000228195883347 h. The per-interval sample volatility
+and actual ACT/365F T are used, without inserting prices. All affected rows
+are labelled `observed_intervals_approximation`. The original strict hourly
+gate and `calibrate_bitcoin.py` continue to reject that gapped window by default.
+See `MARKET_EXPERIMENTS.txt` for the method and measurement definitions.
+
+## Reference engine: Bitcoin one-year price and observed exercise
+
+```powershell
+python -B price_bitcoin.py --run
+```
+
+The saved N=8,760 run returns **16,713.714208750433 USDT per BTC**.
+The first observed exercise is index **5,127**, **2026-06-02 14:00 UTC**:
+observed price **68,019.30 USDT**, payoff **41,588.71 USDT per BTC**.
+The strike is 109,608.01 USDT. Results are in `results/bitcoin_exercise.json`
+and `results/bitcoin_exercise_boundary.csv` (all 8,761 timestamps, observed
+closes and boundary entries; an empty boundary means no exercise region).
+
+The recorded untraced pricing time is **16.0236 seconds** and whole-process
+peak memory is **30,404,608 bytes**. Timing excludes loading, calibration and
+the observed-path scan. Peak memory includes imports and prepared data; it
+is not a pricing-only allocation measurement. The separate traced-allocation
+pass in `benchmark_pricing.py` was not run.
+
+This is a retrospective lab experiment calibrated on the whole selected
+historical window, rather than an out-of-sample trading backtest.
+
+Both pricing interfaces share the O(N^2)-time/O(N)-memory engine. Exact value
+ties continue. At zero or negative interest, waiting weakly dominates early
+exercise for this non-dividend put. Observed boundary equality qualifies;
+positive expiry payoff settles even off the tree lattice. An ITM stock that
+rounds onto K is represented by the next float below K; unrepresentably small
+positive exercise boundaries raise OverflowError.
 
 ## Market calibration and Bitcoin result
 
@@ -236,20 +308,8 @@ New York market sessions, not a USDT series on a 24/7 clock. Do not combine its
 nontrading periods with crypto missing-hour counts. Use a separate exchange
 calendar and period convention if the later lab stage includes it.
 
-## Optional course profiling and reference inspection
+## Lab reference inspection
 
-The shared `Class3/class3_evidence.py` preserves course demonstrations for
-`FillMarketSell`, `PriceAmericanPut`, `RandomizedQuickSort` and `EstimateMeanLoss`.
-From this submission folder in a full checkout:
-
-```powershell
-python ../../../Class3/class3_evidence.py --validate-only
-# Optional figures require matplotlib:
-python ../../../Class3/class3_evidence.py
-```
-
-A local consolidated workspace may keep that script as `class3_evidence.py`;
-run it there directly. Profiling outputs stay ignored.
 `reference/inspect_reference.py` preserves the local lab-reference helper:
 
 ```powershell

@@ -13,7 +13,7 @@ prepared-data checks: mocks check the input wiring and gap gate.
 If Python is not on PATH, replace python with:
   & "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 
-PRODUCTION INTERFACES STILL REQUIRING IMPLEMENTATION
+IMPLEMENTED PRODUCTION INTERFACES
 The existing scalar interface in american_put.py is unchanged:
   price_american_put(S0, K, u, d, R, N) -> float
 
@@ -28,9 +28,8 @@ New companion in exercise_policy.py, using the SAME six inputs/validation:
     timestamp_utc: that observation's supplied UTC timestamp, or None
     payoff: K-P_t on exercise/positive settlement; zero for 'never'
 
-Both new functions are documented stubs raising NotImplementedError.
-The production scalar pricer is implemented. Calibration, boundary construction
-and observed-decision production logic remain for the next stage. market_test_support.py is only input-checking
+Both functions, scalar pricing and calibration are implemented. Scalar and
+boundary pricing share a one-row engine, with O(N^2) time and O(N) memory. market_test_support.py is only input-checking
 and wiring for tests/benchmarks; it never supplies option values or boundaries.
 
 BOUNDARY AND TIE CONVENTIONS
@@ -106,10 +105,25 @@ opt-in skips the expensive case before loading data or calling calibration.
 The filename does not match test*.py and run_tests.py excludes the module.
 
 RESULTS AND BENCHMARKS
-Scalar pricing and reference/data checks pass. Unimplemented calibration and
-exercise contracts remain failures labelled PENDING_IMPLEMENTATION, separated from other
-assertion failures and unittest errors in output/pricing_tests/status.json.
+All 127 fast test methods pass: zero pending cases, failures, errors or skips.
+Current reviewed results are in results/test_summary.json; detailed logs and
+protected-input preservation checks are in output/pricing_tests/status.json.
 The runner now includes boundary_reference, exercise_boundary,
 observed_exercise and prepared_market groups, with separate .log files.
 No tests are disabled with expectedFailure decorators.
 See BENCHMARKS.txt for explicit timing/memory runs, scopes and output units.
+
+ONE-YEAR BITCOIN RESULT
+  python -B price_bitcoin.py --run
+Saves results/bitcoin_exercise.json and bitcoin_exercise_boundary.csv.
+Price: 16713.714208750433 USDT per BTC. First observed exercise:
+2026-06-02T14:00:00Z, index 5127, payoff 41588.71 USDT per BTC.
+This uses retrospective calibration on the same selected historical window.
+All four required market experiment groups are now complete; see
+MARKET_EXPERIMENTS.txt and results/experiments/LAB_RESULTS.txt. The full-history
+results use the explicitly selected observed-interval approximation.
+
+ADDITIONAL REGRESSIONS
+Ten added methods cover shortcut validation, zero strike, nonpositive interest,
+a positive-rate exact tie, general factors, overflowing nonexercise stock,
+invalid observed values, full-path validation, UTC dates and input preservation.
