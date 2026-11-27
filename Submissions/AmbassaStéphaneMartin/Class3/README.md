@@ -7,10 +7,11 @@ This consolidation uses `Ambiss22:class3-price-american-put-ambassa` at
 `9765746` and retains the useful local reference inspector. The complete course
 checkout keeps shared data and profiling code in the top-level `Class3/` folder.
 
-## Current stage: production scalar pricing implemented
+## Current stage: scalar pricing and market calibration implemented
 
-The scalar American put pricer is implemented. Calibration, exercise-boundary
-and observed-exercise functions remain `NotImplementedError` stubs.
+The scalar American put pricer and hourly market calibration are implemented.
+Exercise-boundary construction and observed-exercise decisions remain
+`NotImplementedError` stubs.
 No market-data option value or pricing benchmark has been invented.
 Assignment 1 is unchanged.
 
@@ -18,9 +19,9 @@ Assignment 1 is unchanged.
 |---|---|---|
 | Acquire/inspect all 40 assets | preparation code, hashes, coverage/quality tables | none for this preparation snapshot |
 | Verify small trees and financial properties | production one-row scalar pricer, exact references, property and numerical tests | complete for scalar stage |
-| Calibrate hourly data | sample-volatility and factor contract tests | production calibration |
+| Calibrate hourly data | production log returns, hourly sample volatility and binomial factors; existing contracts pass | complete for this stage |
 | Exercise boundary and observed decision | exact node, tie, indexing and path tests | production exercise logic |
-| Bitcoin one-year/full-history and all-asset experiments | reproducible windows and data-readiness tables | pricing runs and an explicit full-history gap decision |
+| Bitcoin one-year/full-history and all-asset experiments | actual Bitcoin one-year calibration report; reproducible windows and data-readiness tables | pricing runs, other-asset calibration and an explicit full-history gap decision |
 | Runtime/peak memory | opt-in integration and benchmark procedure | actual measurements after implementation |
 
 ## Reproduce from this repository
@@ -49,18 +50,17 @@ platforms; the reviewed manifest records the measured Windows snapshot. Course
 data stay unchanged. The course PDF is referenced, not redistributed, and is
 not needed for preparation.
 
-`run_tests.py` intentionally exits **1** while calibration and exercise logic
-are pending. The saved snapshot in `results/test_summary.json` records 105 methods:
-63 passing scalar/reference/data methods and 42 methods covering pending
-calibration/exercise contracts (83 failing cases, including subtests). Unexpected assertion failures
-and unittest errors are both zero in the saved snapshot. No `expectedFailure`
-decorators hide regressions. Two additional snapshot tests check that the
-consolidated workspace reuses its data and detects changed input bytes.
+`run_tests.py` currently runs 107 methods: **86 pass**. The remaining 21
+exercise-policy methods have 33 pending cases (16 boundary, 17 observed-decision
+cases); unexpected assertion failures and unittest errors are zero. The runner
+intentionally exits **1** until those functions are implemented. The historical
+105-method pre-calibration snapshot remains in `results/test_summary.json`.
+The existing calibration and scalar-pricing test files are unchanged.
 
 Run only the implemented scalar/reference/data checks:
 
 ```powershell
-python -m unittest -v test_american_put test_american_put_properties test_american_put_numerics
+python -B -m unittest -v test_market_calibration test_american_put test_american_put_numerics test_american_put_properties
 python -m unittest -v test_prepare_data test_prepared_market test_exercise_policy.BoundaryReferenceTests
 ```
 
@@ -72,7 +72,8 @@ python reference/check_outputs.py
 
 ## Reviewed tables and provenance
 
-`results/` contains `asset_summary.csv`, `window_summary.csv`, `gaps.csv`,
+`results/bitcoin_calibration.json` is the reproducible report for the implemented
+market-calibration stage. `results/` also contains `asset_summary.csv`, `window_summary.csv`, `gaps.csv`,
 `exclusions.csv`, `REPORT.txt`, `test_summary.json`, `scalar_validation.json`, `source_manifest.json`, `verification.json` and
 `run_metadata.json`. These are the preparation/test snapshot; fresh results
 are regenerated under `output/`.
@@ -95,7 +96,7 @@ table or benchmark measurement; those experiments are deferred.
 - `EXERCISE_TESTS.txt`: boundary/path interfaces, ties, settlement and gap gates.
 - `BENCHMARKS.txt`: explicit elapsed-time/peak-memory protocol and run commands.
 
-After calibration and boundary implementation, explicitly run the expensive market check:
+After boundary implementation, explicitly run the expensive market check:
 
 ```powershell
 python bitcoin_integration_check.py --run
@@ -104,6 +105,40 @@ python bitcoin_integration_check.py --run
 Large-tree runs stay outside the default fast suite. Benchmark output distinguishes
 untraced elapsed time, peak traced Python allocations and whole-process peak
 resident memory. There are no machine-dependent timing pass/fail thresholds.
+
+## Market calibration and Bitcoin result
+
+```powershell
+python -B calibrate_bitcoin.py
+```
+
+This reuses `load_prepared_window`, `require_hourly_window` and
+`calibrate_prepared_window`; elapsed years come from the timestamps using
+ACT/365F. The one-year window runs from **2025-10-31 23:00 UTC** to
+**2026-10-31 23:00 UTC**: 8,761 closes, 8,760 periods, T=1 year and
+S0=K=P0=109608.01 USDT. At the default continuously compounded annual rate 0.04:
+
+| Parameter | Actual value |
+|---|---:|
+| Hourly sample volatility s | 0.00460739514049591 |
+| u = exp(s) | 1.004618025505313 |
+| d = 1/u | 0.9954032026222204 |
+| R = exp(annual_rate*T/N) | 1.0000045662204708 |
+| q = (R-d)/(u-d) | 0.49934368317518857 |
+
+`log_returns` calculates adjacent natural-log returns. `sample_hourly_volatility`
+uses sample standard deviation with denominator N-1, without annualization.
+Near-equal prices use `log1p`; extreme ratios use log differences; accurate
+sample sums avoid unnecessary overflow or underflow. Inputs are preserved.
+Invalid or insufficient inputs, zero volatility, nonfinite/degenerate factors
+and violations of 0<d<R<u or 0<q<1 raise `ValueError`. No volatility floor or
+probability clipping is used. The `Calibration` dataclass and public signatures
+are preserved.
+
+The report includes input and implementation hashes and the full-history gap
+rejection. Full history still misses **2023-03-24 13:00 UTC** and is not
+calibrated. No exercise boundary or 8,760-period pricing run is performed.
+
 ## Scalar algorithm and numerical scope
 
 `price_american_put(S0, K, u, d, R, N) -> float` validates inputs before shortcuts

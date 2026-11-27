@@ -53,9 +53,9 @@ payoffs 0,4,36; divide their expected payoff by (21/20)**2 to obtain 925/147.
 An immediate-exercise example gives American 20 versus European 320/21.
 These reference checks and the implemented scalar pricing/property tests pass.
 
-CALIBRATION INTERFACES REQUIRING IMPLEMENTATION
-File: market_calibration.py. These three functions currently raise
-NotImplementedError; no production calibration logic has been implemented.
+IMPLEMENTED CALIBRATION INTERFACES
+File: market_calibration.py. All three functions are implemented; the existing
+21 calibration test methods pass without changed assertions or expected values.
 
   log_returns(prices) -> tuple[float, ...]
     Return adjacent natural-log returns ln(P_i/P_(i-1)).
@@ -105,7 +105,7 @@ DETERMINISTIC CALIBRATION FIXTURES
   nonfinite inputs and impossible risk-neutral probabilities have explicit tests.
 Tolerance matches the pricing tests: relative 1e-12 and absolute 1e-12.
 
-USING THE INTERFACES IN THE NEXT STAGE (AFTER IMPLEMENTATION)
+USING THE INTERFACES (LARGE TREE PRICING REMAINS A LATER STAGE)
   model = calibrate_binomial(selected_prices, T=actual_elapsed_years)
   value = price_american_put(selected_prices[0], selected_prices[0],
                              model.u, model.d, model.R, model.N)
@@ -120,7 +120,7 @@ Only an explicit NotImplementedError from a production stub is classified as
 PENDING_IMPLEMENTATION. Import errors, syntax errors, wrong exception types
 and other unexpected exceptions remain errors; wrong results remain failures.
 No expectedFailure decorators or skips hide implementation regressions.
-Exit code 1 is expected while calibration/exercise-policy functions remain unimplemented.
+Exit code 1 is expected while the two exercise-policy functions remain unimplemented.
 The full-tree reference checks and 14 original data-preparation tests should pass.
 Original pricing/data-preparation code, tests, README and manifest are preserved;
 the runner checks their SHA-256 hashes before and after executing the tests.
@@ -129,3 +129,31 @@ ADDITIONAL EXERCISE TESTS
 See EXERCISE_TESTS.txt for the boundary_reference, exercise_boundary,
 observed_exercise and prepared_market groups now included in the fast runner.
 See BENCHMARKS.txt for the separate opt-in time/memory procedure.
+
+CURRENT CALIBRATION VALIDATION
+Before implementation, python -B -m unittest -v test_market_calibration ran
+21 methods with 50 pending implementation failures (including subtests).
+After implementation, all 54 methods pass with:
+  python -B -m unittest -v test_market_calibration test_american_put test_american_put_numerics test_american_put_properties
+The full runner executes 107 methods: 86 pass, while 21 exercise-policy methods
+retain 33 pending cases. Unexpected assertion failures and unittest errors are zero.
+The original calibration and scalar-pricing test files remain unchanged.
+
+NUMERICAL HANDLING
+Adjacent prices use log1p for near-equal levels, direct log ratios when finite,
+and log differences if a finite pair's ratio overflows or underflows.
+Sample volatility uses statistics.stdev, with denominator N-1 and accurate
+sums that avoid unnecessary intermediate squared-float over/underflow.
+All normalized inputs must be finite real floats; numeric text and booleans
+are rejected. Calculations preserve the supplied sequences.
+Factors must remain finite and satisfy 0<d<R<u in binary64; under-resolved
+or overflowing factors are rejected. No volatility floor or probability clip is used.
+
+BITCOIN ONE-YEAR CALIBRATION
+  python -B calibrate_bitcoin.py
+This uses the prepared-window loader and its ACT/365F hourly-spacing gate,
+verifies 8,761 closes / 8,760 periods / T=1, and writes the actual factors,
+dates, initial spot/strike and source hashes to results/bitcoin_calibration.json.
+The full-history window is not calibrated: its missing 2023-03-24T13:00:00Z
+hour remains flagged for explicit treatment. No boundary or large-tree pricing
+is run by the report script.
