@@ -1,0 +1,10 @@
+# Course raw data and window rows are reproducible; commit code and summary tables.
+__pycache__/
+*.py[cod]
+data/raw/
+data/source_manifest.json
+output/
+reference/course_data/
+reference/slides/
+reference/*.pdf
+*.log

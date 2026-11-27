@@ -1,0 +1,96 @@
+{
+  "scope": "Class3 PriceAmericanPut: production scalar pricing implemented; calibration/exercise pending",
+  "course_source_commit": "0325907cb0a6cc3cd1f292fca095b52d9343ac97",
+  "python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+  "generated_at_utc": "2026-11-27T14:51:31.225327+00:00",
+  "expensive_runs_in_default_suite": false,
+  "suites": {
+    "pricing": {
+      "test_methods_run": 17,
+      "expected_red_failures_missing_implementation": 0,
+      "other_assertion_failures": 0,
+      "unittest_errors": 0,
+      "skipped": 0,
+      "passed": true
+    },
+    "scalar_numerics": {
+      "test_methods_run": 6,
+      "expected_red_failures_missing_implementation": 0,
+      "other_assertion_failures": 0,
+      "unittest_errors": 0,
+      "skipped": 0,
+      "passed": true
+    },
+    "full_tree_reference": {
+      "test_methods_run": 3,
+      "expected_red_failures_missing_implementation": 0,
+      "other_assertion_failures": 0,
+      "unittest_errors": 0,
+      "skipped": 0,
+      "passed": true
+    },
+    "financial_properties": {
+      "test_methods_run": 7,
+      "expected_red_failures_missing_implementation": 0,
+      "other_assertion_failures": 0,
+      "unittest_errors": 0,
+      "skipped": 0,
+      "passed": true
+    },
+    "calibration": {
+      "test_methods_run": 21,
+      "expected_red_failures_missing_implementation": 50,
+      "other_assertion_failures": 0,
+      "unittest_errors": 0,
+      "skipped": 0,
+      "passed": false
+    },
+    "boundary_reference": {
+      "test_methods_run": 5,
+      "expected_red_failures_missing_implementation": 0,
+      "other_assertion_failures": 0,
+      "unittest_errors": 0,
+      "skipped": 0,
+      "passed": true
+    },
+    "exercise_boundary": {
+      "test_methods_run": 8,
+      "expected_red_failures_missing_implementation": 16,
+      "other_assertion_failures": 0,
+      "unittest_errors": 0,
+      "skipped": 0,
+      "passed": false
+    },
+    "observed_exercise": {
+      "test_methods_run": 13,
+      "expected_red_failures_missing_implementation": 17,
+      "other_assertion_failures": 0,
+      "unittest_errors": 0,
+      "skipped": 0,
+      "passed": false
+    },
+    "prepared_market": {
+      "test_methods_run": 11,
+      "expected_red_failures_missing_implementation": 0,
+      "other_assertion_failures": 0,
+      "unittest_errors": 0,
+      "skipped": 0,
+      "passed": true
+    },
+    "data_preparation": {
+      "test_methods_run": 14,
+      "expected_red_failures_missing_implementation": 0,
+      "other_assertion_failures": 0,
+      "unittest_errors": 0,
+      "skipped": 0,
+      "passed": true
+    }
+  },
+  "totals": {
+    "test_methods": 105,
+    "passing_test_methods": 63,
+    "expected_pending_case_failures": 83,
+    "other_assertion_failures": 0,
+    "unittest_errors": 0
+  }
+}
