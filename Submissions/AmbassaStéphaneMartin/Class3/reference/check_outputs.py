@@ -24,10 +24,15 @@ def read_csv(path):
         return list(csv.DictReader(stream))
 
 
+def summary_path(name):
+    generated = OUT / name
+    return generated if generated.is_file() else ROOT / 'results' / name
+
+
 def check():
     manifest = json.loads((ROOT / 'data' / 'source_manifest.json').read_text(encoding='utf-8'))
-    summaries = {row['asset']: row for row in read_csv(OUT / 'asset_summary.csv')}
-    windows = {(row['asset'], row['window']): row for row in read_csv(OUT / 'window_summary.csv')}
+    summaries = {row['asset']: row for row in read_csv(summary_path('asset_summary.csv'))}
+    windows = {(row['asset'], row['window']): row for row in read_csv(summary_path('window_summary.csv'))}
     expected = {START + i * HOUR for i in range(int((END-START)/HOUR) + 1)}
     assert len(expected) == 43824
     assert len(summaries) == 40 and len(windows) == 80
@@ -38,7 +43,10 @@ def check():
         path = ROOT / entry['file']
         raw_bytes = path.read_bytes()
         assert hashlib.sha256(raw_bytes).hexdigest() == entry['sha256']
-        original = Path(manifest['source_checkout']) / entry['repository_file']
+        checkout = Path(manifest['source_checkout'])
+        if not checkout.is_absolute():
+            checkout = ROOT / checkout
+        original = checkout / entry['repository_file']
         assert original.read_bytes() == raw_bytes, f'Source/snapshot mismatch: {path}'
         hashes += 1
         raw = read_csv(path)
@@ -99,8 +107,8 @@ def check():
                 assert next(reader, None) is None
                 assert observed == len(expected_rows)
                 exported_rows += observed
-    assert len(read_csv(OUT / 'exclusions.csv')) == 0
-    gap_rows = read_csv(OUT / 'gaps.csv')
+    assert len(read_csv(summary_path('exclusions.csv'))) == 0
+    gap_rows = read_csv(summary_path('gaps.csv'))
     assert len(gap_rows) == 40
     assert {row['first_missing_utc'] for row in gap_rows} == {'2023-03-24T13:00:00Z'}
     btc_one = windows['BTCUSDT', 'one_year']

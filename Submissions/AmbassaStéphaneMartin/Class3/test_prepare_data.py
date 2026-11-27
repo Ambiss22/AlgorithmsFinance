@@ -5,6 +5,7 @@ from decimal import Decimal
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import prepare_data as prep
 
@@ -170,6 +171,44 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(data.summary['invalid_prices'], 1)
         self.assertEqual(data.summary['excluded_rows'], 2)
         self.assertEqual(len(data.observations), 1)
+
+
+class SnapshotAcquisitionTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.repo = Path(self.temporary.name)
+        self.project = self.repo / 'Submissions' / 'Student' / 'Class3'
+        self.data = self.project / 'data'
+        (self.data / 'hourly').mkdir(parents=True)
+        for symbol in prep.SYMBOLS:
+            (self.data / 'hourly' / f'{symbol}.csv').write_text(
+                'timestamp_utc,close\n2026-01-01T00:00:00Z,100\n', encoding='utf-8')
+        for filename in ('README.md', 'fetch_sp500.py', 'build_hourly_data.py'):
+            (self.data / filename).write_text(filename, encoding='utf-8')
+        # An unrelated course copy must not replace the selected local dataset.
+        (self.repo / 'Class3' / 'data' / 'hourly').mkdir(parents=True)
+        inspect_git = patch.object(prep, 'git_read', side_effect=lambda repo, *args:
+                                  'source-commit' if args == ('rev-parse', 'HEAD') else '')
+        inspect_git.start()
+        self.addCleanup(inspect_git.stop)
+
+    def test_local_inputs_are_registered_without_copying_or_changing_them(self):
+        before = {path: prep.sha256(path) for path in self.data.rglob('*') if path.is_file()}
+        manifest = prep.acquire_snapshot(self.repo, self.project)
+        self.assertEqual(len(manifest['files']), 40)
+        self.assertTrue(all(entry['file'].startswith('data/hourly/') for entry in manifest['files']))
+        self.assertFalse((self.data / 'raw').exists())
+        self.assertFalse((self.project / 'reference' / 'course_data').exists())
+        self.assertEqual(before, {path: prep.sha256(path) for path in before})
+        self.assertEqual(prep.verify_snapshot(self.project), manifest)
+        self.assertEqual(prep.acquire_snapshot(self.repo, self.project), manifest)
+
+    def test_registered_input_changes_are_detected(self):
+        prep.acquire_snapshot(self.repo, self.project)
+        (self.data / 'hourly' / 'BTCUSDT.csv').write_text('changed input', encoding='utf-8')
+        with self.assertRaisesRegex(ValueError, 'integrity check failed'):
+            prep.verify_snapshot(self.project)
 
 
 def CounterReasons(exclusions):

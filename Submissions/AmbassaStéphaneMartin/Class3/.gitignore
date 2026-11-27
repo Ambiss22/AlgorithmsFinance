@@ -1,4 +1,4 @@
-# Course raw data and window rows are reproducible; commit code and summary tables.
+data/hourly/SP500.csv
 __pycache__/
 *.py[cod]
 data/raw/
@@ -8,3 +8,11 @@ reference/course_data/
 reference/slides/
 reference/*.pdf
 *.log
+
+# Local working records and editor files.
+.local-workspace/
+.submission/
+SUBMISSION.json
+SUBMISSION.txt
+*.code-workspace
+.merge-check-temp/

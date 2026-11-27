@@ -7,9 +7,11 @@ import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parent
+WINDOW_SUMMARY = ('output/window_summary.csv' if (ROOT / 'output/window_summary.csv').is_file()
+                  else 'results/window_summary.csv')
 PROTECTED = ('prepare_data.py', 'test_prepare_data.py', 'README.md', 'data/source_manifest.json',
              'american_put.py', 'test_american_put.py', 'market_calibration.py', 'test_market_calibration.py',
-             'test_american_put_properties.py', 'output/window_summary.csv',
+             'test_american_put_properties.py', WINDOW_SUMMARY,
              'output/windows/BTCUSDT/one_year.csv', 'output/windows/BTCUSDT/full_history.csv')
 SUITES = (
     ('pricing', 'test_american_put'),

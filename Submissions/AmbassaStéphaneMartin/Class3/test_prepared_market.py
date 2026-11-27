@@ -1,6 +1,7 @@
 """Fast integration with prepared Bitcoin CSVs; no tree pricing or real calibration."""
 from collections import deque
 import csv
+import json
 from dataclasses import replace
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -19,7 +20,9 @@ class PreparedBitcoinTests(unittest.TestCase):
     def setUpClass(cls):
         cls.year = support.load_prepared_window('BTCUSDT', 'one_year')
         cls.full = support.load_prepared_window('BTCUSDT', 'full_history')
-        with (ROOT / 'data' / 'raw' / 'BTCUSDT.csv').open(newline='', encoding='utf-8') as stream:
+        manifest = json.loads((ROOT / 'data' / 'source_manifest.json').read_text(encoding='utf-8'))
+        raw_path = next(entry['file'] for entry in manifest['files'] if entry['asset'] == 'BTCUSDT')
+        with (ROOT / raw_path).open(newline='', encoding='utf-8') as stream:
             cls.raw_tail = deque(csv.DictReader(stream), maxlen=8761)
 
     def test_one_year_has_8761_closes_and_8760_changes(self):

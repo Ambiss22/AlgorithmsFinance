@@ -82,7 +82,8 @@ OBSERVED-PATH CONVENTIONS
   Reject invalid lengths, invalid timestamps and zero/NaN missing-region markers.
 
 PREPARED BITCOIN CHECKS (FAST)
-Tests read output/window_summary.csv and the existing two Bitcoin window files.
+Tests read output/window_summary.csv, falling back to results/window_summary.csv,
+and the existing two Bitcoin window files under output/windows/.
 The one-year file must have 8,761 closes, N=8,760 and P_0...P_8760 labels.
 S0=K is checked against the FIRST selected close and the raw file's last 8,761
 closes. It is not the latest close. Actual elapsed hours must equal 8,760.

@@ -2,12 +2,15 @@
 
 This submission corresponds to **Lab: PriceAmericanPut on market data** in
 `AlgorithmsFinance_Slides3.pdf` (PDF pages 29-32; printed lab slides 29/31-31/31).
-The required submission location is `Submissions/AmbassaStéphaneMartin/Class3/`.
+`Submissions/AmbassaStéphaneMartin/Class3/` is the canonical working folder.
+This consolidation uses `Ambiss22:class3-price-american-put-ambassa` at
+`9765746` and retains the useful local reference inspector. The complete course
+checkout keeps shared data and profiling code in the top-level `Class3/` folder.
 
 ## Current stage: production scalar pricing implemented
 
-This is a **draft** with an implemented scalar American put pricer. Calibration,
-exercise-boundary and observed-exercise functions remain `NotImplementedError` stubs.
+The scalar American put pricer is implemented. Calibration, exercise-boundary
+and observed-exercise functions remain `NotImplementedError` stubs.
 No market-data option value or pricing benchmark has been invented.
 Assignment 1 is unchanged.
 
@@ -30,9 +33,14 @@ python prepare_data.py --source-repo ../../..
 python run_tests.py
 ```
 
-Preparation copies the unchanged course `Class3/data/hourly` files into ignored
-local `data/raw/`, then regenerates the 80 window CSVs and audit files in ignored
-`output/`. It does not fetch, change course files, or fill missing hours.
+The first command acquires the supplied course snapshot and regenerates the
+80 window CSVs and audit files in ignored `output/`. In a full course checkout,
+inputs are copied once from the shared `Class3/data/hourly/` folder into ignored
+`data/raw/`; they are not duplicated in this submission's Git history. A local
+consolidated workspace that already contains `data/hourly/` reuses those files
+without copying them. Preparation does not fetch or fill missing hours. Later runs need only
+`python prepare_data.py`. Reviewed snapshots stay in `results/`; consumers use
+fresh `output/` tables when present and otherwise the reviewed tables.
 The reviewed `results/source_manifest.json` records the source commit and measured file hashes.
 The local data/source_manifest.json is generated during the first bootstrap and
 then preserves that local snapshot. On subsequent runs use python prepare_data.py
@@ -41,11 +49,13 @@ platforms; the reviewed manifest records the measured Windows snapshot. Course
 data stay unchanged. The course PDF is referenced, not redistributed, and is
 not needed for preparation.
 
-At this stage `run_tests.py` intentionally exits **1**: 105 test methods comprise
+`run_tests.py` intentionally exits **1** while calibration and exercise logic
+are pending. The saved snapshot in `results/test_summary.json` records 105 methods:
 63 passing scalar/reference/data methods and 42 methods covering pending
 calibration/exercise contracts (83 failing cases, including subtests). Unexpected assertion failures
 and unittest errors are both zero in the saved snapshot. No `expectedFailure`
-decorators hide regressions.
+decorators hide regressions. Two additional snapshot tests check that the
+consolidated workspace reuses its data and detects changed input bytes.
 
 Run only the implemented scalar/reference/data checks:
 
@@ -74,9 +84,9 @@ close. Full history contains 43,823 closes and is missing
 are flagged for explicit treatment before equal-hour calibration. S&P 500 retrieval
 is documented separately in the report and has not been run.
 
-Raw files and approximately two million exported window rows are reproducible
-from course files and are not duplicated in this PR. The snapshot includes no
-market-data pricing table or benchmark measurement; those experiments are deferred.
+The 40 input files are already versioned in the course's `Class3/data/hourly/`.
+Local snapshot copies and generated window rows stay ignored. The snapshot includes no market-data pricing
+table or benchmark measurement; those experiments are deferred.
 
 ## Interfaces, tests and opt-in performance work
 
@@ -130,14 +140,17 @@ python prepare_data.py --source-repo "C:\path\to\AlgorithmsFinance" --reference-
 
 If needed, first clone the course repository into a new folder with
 `git clone https://github.com/cogeorg/AlgorithmsFinance.git "C:\path\to\course-checkout"`.
-Acquisition copies the 40 CSVs and course data reference files; it does not pull
-into a branch that contains local work.
+Acquisition reuses `data/hourly/` when that local consolidated dataset exists.
+Otherwise it copies the external course snapshot into ignored `data/raw/` and
+reference scripts into ignored `reference/course_data/`. It does not pull into
+the checkout. Shared course files are not copied into this submission's Git history.
 
 | Local generated path | Meaning |
 |---|---|
-| `data/raw/<ASSET>.csv` | Unchanged input bytes with `timestamp_utc,close` columns |
+| `data/raw/<ASSET>.csv` | Ignored local snapshot of the shared course inputs |
+| `data/hourly/<ASSET>.csv` | Existing dataset reused by a local consolidated workspace |
 | `data/source_manifest.json` | Local source URL, commit, hashes and optional PDF provenance |
-| `reference/course_data/` | Copied course data README and retrieval scripts |
+| `reference/course_data/` | Ignored reference scripts copied with an external snapshot |
 | `reference/AlgorithmsFinance_Slides3.pdf` | Optional supplied PDF, preserved locally and not committed |
 | `output/REPORT.txt` | Regenerated cleaning decisions and Bitcoin readiness |
 | `output/gaps.csv`, `output/exclusions.csv` | Missing intervals and excluded source rows |
@@ -187,3 +200,26 @@ writes hourly/SP500.csv relative to the script. It returns index points during
 New York market sessions, not a USDT series on a 24/7 clock. Do not combine its
 nontrading periods with crypto missing-hour counts. Use a separate exchange
 calendar and period convention if the later lab stage includes it.
+
+## Optional course profiling and reference inspection
+
+The shared `Class3/class3_evidence.py` preserves course demonstrations for
+`FillMarketSell`, `PriceAmericanPut`, `RandomizedQuickSort` and `EstimateMeanLoss`.
+From this submission folder in a full checkout:
+
+```powershell
+python ../../../Class3/class3_evidence.py --validate-only
+# Optional figures require matplotlib:
+python ../../../Class3/class3_evidence.py
+```
+
+A local consolidated workspace may keep that script as `class3_evidence.py`;
+run it there directly. Profiling outputs stay ignored.
+`reference/inspect_reference.py` preserves the local lab-reference helper:
+
+```powershell
+python reference/inspect_reference.py reference/AlgorithmsFinance_Slides3.pdf
+```
+
+Reference text extraction needs `pypdf`; optional `--render` also needs
+`pypdfium2` and Pillow. The reference PDF and rendered pages stay local.

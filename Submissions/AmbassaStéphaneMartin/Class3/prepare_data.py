@@ -299,24 +299,29 @@ def git_read(repo: Path, *args: str) -> str:
 
 
 def acquire_snapshot(repo: Path, project: Path, reference_pdf: Path | None = None) -> dict:
-    """Copy only supplied market data and references, never change a checkout.
+    """Reuse project course data or copy an external snapshot and references.
 
     Existing raw bytes and an existing manifest are never overwritten. A changed
     source requires a new snapshot directory/project, not silent replacement.
     """
     repo = repo.resolve()
+    project = project.resolve()
     source = repo / 'Class3' / 'data'
+    local_data = project / 'data'
+    if project.is_relative_to(repo) and (local_data / 'hourly').is_dir():
+        source = local_data
+    shared_source = source.resolve() == (project / 'data').resolve()
     supplied = sorted(p.stem for p in (source / 'hourly').glob('*USDT.csv'))
     if supplied != list(SYMBOLS):
         raise ValueError(f'Expected the 40 course assets; missing={sorted(set(SYMBOLS)-set(supplied))}; '
                          f'unexpected={sorted(set(supplied)-set(SYMBOLS))}')
     commit = git_read(repo, 'rev-parse', 'HEAD')
-    dirty = git_read(repo, 'status', '--porcelain', '--', 'Class3/data')
-    raw = project / 'data' / 'raw'
+    dirty = git_read(repo, 'status', '--porcelain', '--', source.relative_to(repo).as_posix())
+    raw = source / 'hourly' if shared_source else project / 'data' / 'raw'
     raw.mkdir(parents=True, exist_ok=True)
     manifest_path = raw.parent / 'source_manifest.json'
     previous = json.loads(manifest_path.read_text(encoding='utf-8')) if manifest_path.exists() else None
-    if previous and previous['repository_commit'] != commit:
+    if previous and previous['repository_commit'] != commit and not shared_source:
         raise ValueError('Snapshot commit differs; existing raw snapshot has been preserved.')
     entries = []
     for symbol in SYMBOLS:
@@ -330,9 +335,9 @@ def acquire_snapshot(repo: Path, project: Path, reference_pdf: Path | None = Non
         if sha256(target) != digest or sha256(original) != digest:
             raise RuntimeError(f'{symbol}: input changed during snapshot acquisition.')
         entries.append({'asset': symbol, 'file': target.relative_to(project).as_posix(),
-                        'repository_file': f'Class3/data/hourly/{symbol}.csv',
+                        'repository_file': original.relative_to(repo).as_posix(),
                         'bytes': target.stat().st_size, 'sha256': digest})
-    references = project / 'reference' / 'course_data'
+    references = source if shared_source else project / 'reference' / 'course_data'
     references.mkdir(parents=True, exist_ok=True)
     ref_entries = []
     for filename in ('README.md', 'fetch_sp500.py', 'build_hourly_data.py'):
@@ -490,7 +495,7 @@ def make_report(manifest: dict, assets: list[dict], windows: list[dict], gaps: l
                      f'affecting {len(set(affected))}/40 assets.')
     lines.append('Per-asset quality fields and window availability are in the two summary CSVs.')
     lines += ['', '6. S&P 500 is a separate acquisition/calendar problem',
-              'The supplied reference/course_data/fetch_sp500.py requests Yahoo',
+              'The supplied data/fetch_sp500.py requests Yahoo',
               'Finance ^GSPC with range=730d&interval=1h (roughly TWO years, although',
               'the course README describes roughly three years). It drops null closes',
               'and writes hourly/SP500.csv relative to the script. It has not been run.',
@@ -524,9 +529,11 @@ def prepare(project: Path, output: Path) -> tuple[list[dict], list[dict]]:
     asset_rows, window_rows, exclusions, gaps = [], [], [], []
     # Bitcoin is validated/exported first; the identical implementation handles all others.
     order = ['BTCUSDT'] + [symbol for symbol in SYMBOLS if symbol != 'BTCUSDT']
+    source_files = {entry['asset']: entry['file'] for entry in manifest['files']}
     for symbol in order:
-        data = load_asset(project / 'data' / 'raw' / f'{symbol}.csv')
+        data = load_asset(project / source_files[symbol])
         row = data.summary.copy()
+        row['file'] = source_files[symbol]
         for name in ('one_year', 'full_history'):
             window = select_window(data, name)
             metadata = window.summary()
@@ -562,7 +569,7 @@ def prepare(project: Path, output: Path) -> tuple[list[dict], list[dict]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--source-repo', type=Path, help='Existing course checkout; copied, never changed.')
+    parser.add_argument('--source-repo', type=Path, help='Existing checkout; reuse local course data or copy an external snapshot.')
     parser.add_argument('--reference-pdf', type=Path, help='Local AlgorithmsFinance_Slides3.pdf to preserve.')
     parser.add_argument('--out', type=Path, help='Generated outputs, default: project/output.')
     args = parser.parse_args()

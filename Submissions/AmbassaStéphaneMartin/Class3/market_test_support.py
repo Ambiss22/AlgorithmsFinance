@@ -25,7 +25,10 @@ class PreparedWindow:
 
 def load_prepared_window(asset='BTCUSDT', window='one_year', *, project=ROOT):
     output = Path(project).resolve() / 'output'
-    with (output / 'window_summary.csv').open(newline='', encoding='utf-8') as stream:
+    summary = output / 'window_summary.csv'
+    if not summary.is_file():
+        summary = Path(project).resolve() / 'results' / 'window_summary.csv'
+    with summary.open(newline='', encoding='utf-8') as stream:
         matches = [row for row in csv.DictReader(stream) if row['asset'] == asset and row['window'] == window]
     if len(matches) != 1:
         raise ValueError(f'Expected exactly one prepared window: {asset}/{window}.')
